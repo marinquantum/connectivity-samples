@@ -25,7 +25,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.bluetoothlechat.bluetooth.SERVICE_UUID
+import com.example.bluetoothlechat.bluetooth.SERVICE_UUIDS
 import com.example.bluetoothlechat.scan.DeviceScanViewState.*
+import java.util.*
 
 
 private const val TAG = "DeviceScanViewModel"
@@ -107,7 +109,20 @@ class DeviceScanViewModel(app: Application) : AndroidViewModel(app) {
         // Comment out the below line to see all BLE devices around you
         builder.setServiceUuid(ParcelUuid(SERVICE_UUID))
         val filter = builder.build()
-        return listOf(filter)
+
+        var filterList = mutableListOf<ScanFilter>()
+        filterList.add(filter)
+
+        val ints: IntArray = intArrayOf(0, 1, 2)
+
+        for (i in ints) {
+            val builder = ScanFilter.Builder()
+            builder.setServiceUuid(ParcelUuid(SERVICE_UUIDS[i]))
+            val filter = builder.build()
+            filterList.add(filter)
+        }
+
+        return Collections.unmodifiableList(filterList)
     }
 
     /**
