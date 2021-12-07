@@ -229,7 +229,14 @@ object ChatServer {
             app,
             gattServerCallback
         ).apply {
-            addService(setupGattService())
+            val setupGattServiceInstance = setupGattService()
+            try {
+                setupGattServiceInstance?.let {
+                    addService(it)
+                }
+            } catch (e:NullPointerException) {
+                System.err.println("Null pointer exception");
+            }
         }
     }
 
@@ -241,7 +248,14 @@ object ChatServer {
             app,
             gattServerCallbackList[serverIndex]
         ).apply {
-            addService(setupGattService(serverIndex))
+            val setupGattServiceInstance = setupGattService(serverIndex)
+            try {
+                setupGattServiceInstance?.let {
+                    addService(it)
+                }
+            } catch (e:NullPointerException) {
+                System.err.println("Null pointer exception");
+            }
         }
     }
 
@@ -321,6 +335,7 @@ object ChatServer {
         Log.d(TAG, "Stopping Advertising with advertiser $advertiser")
         advertiser?.stopAdvertising(advertiseCallback)
         advertiseCallback = null
+        gattServer?.close()
     }
 
     private fun stopAdvertising(serverIndex: Int) {
@@ -328,6 +343,7 @@ object ChatServer {
         Log.d(TAG, "Stopping Advertising with advertiser $advertiser")
         advertiserList[serverIndex]?.stopAdvertising(advertiseCallbackList[serverIndex])
         advertiseCallbackList[serverIndex] = null
+        gattServerList[serverIndex]?.close()
     }
 
     /**
