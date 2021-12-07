@@ -120,10 +120,10 @@ object ChatServer {
             _requestEnableBluetooth.value = true
         } else {
             _requestEnableBluetooth.value = false
-            setupGattServer(app)
-            startAdvertisement()
+//            setupGattServer(app)
+//            startAdvertisement()
 
-            val ints: IntArray = intArrayOf(0, 1, 2)
+            val ints: IntArray = intArrayOf(0, 1)
 
             for (i in ints) {
                 setupGattServer(app, i)
@@ -133,9 +133,9 @@ object ChatServer {
     }
 
     fun stopServer() {
-        stopAdvertising()
+//        stopAdvertising()
 
-        val ints: IntArray = intArrayOf(0, 1, 2)
+        val ints: IntArray = intArrayOf(0, 1)
 
         for (i in ints) {
             stopAdvertising(i)
@@ -162,7 +162,7 @@ object ChatServer {
     fun setCurrentChatConnection(device: BluetoothDevice, serverIndex: Int) {
         currentDeviceList[serverIndex] = device
         // Set gatt so BluetoothChatFragment can display the device data
-        _deviceConnection.value = DeviceConnectionState.Connected(device)
+        _deviceConnectionList[serverIndex].value = DeviceConnectionState.Connected(device)
         connectToChatDevice(device, serverIndex)
     }
 

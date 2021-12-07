@@ -32,9 +32,9 @@ val SERVICE_UUID: UUID = UUID.fromString("0000b81d-0000-1000-8000-00805f9b34fb")
 /**
  * Creating multiple services to support more than one connection at a time
  */
-val SERVICE_UUID1: UUID = UUID.fromString("907c08d3-60bc-4c17-a168-af75cf39dea0")
-val SERVICE_UUID2: UUID = UUID.fromString("f087eda5-c05a-45a5-8250-c596139cf59c")
-val SERVICE_UUID3: UUID = UUID.fromString("9fde6727-2734-419d-b869-1ecc8cb7b136")
+val SERVICE_UUID1: UUID = UUID.fromString("0000e235-0000-1000-8000-00805f9b34fb")
+val SERVICE_UUID2: UUID = UUID.fromString("0000bba7-0000-1000-8000-00805f9b34fb")
+val SERVICE_UUID3: UUID = UUID.fromString("000036ae-0000-1000-8000-00805f9b34fb")
 
 val SERVICE_UUIDS = listOf(SERVICE_UUID1, SERVICE_UUID2, SERVICE_UUID3)
 
