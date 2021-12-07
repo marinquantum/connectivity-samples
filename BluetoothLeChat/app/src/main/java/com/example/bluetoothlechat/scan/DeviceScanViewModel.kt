@@ -111,16 +111,16 @@ class DeviceScanViewModel(app: Application) : AndroidViewModel(app) {
         val filter = builder.build()
 
         var filterList = mutableListOf<ScanFilter>()
-//        filterList.add(filter)
+        filterList.add(filter)
 
-        val ints: IntArray = intArrayOf(0, 1)
-
-        for (i in ints) {
-            val builder = ScanFilter.Builder()
-            builder.setServiceUuid(ParcelUuid(SERVICE_UUIDS[i]))
-            val filter = builder.build()
-            filterList.add(filter)
-        }
+//        val ints: IntArray = intArrayOf(0, 1)
+//
+//        for (i in ints) {
+//            val builder = ScanFilter.Builder()
+//            builder.setServiceUuid(ParcelUuid(SERVICE_UUIDS[i]))
+//            val filter = builder.build()
+//            filterList.add(filter)
+//        }
 
         return Collections.unmodifiableList(filterList)
     }

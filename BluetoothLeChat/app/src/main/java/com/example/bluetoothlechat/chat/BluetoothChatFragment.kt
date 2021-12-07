@@ -101,7 +101,7 @@ class BluetoothChatFragment : Fragment() {
                 if(connectedDevices.contains("device1")) {
                     connectedDevices.remove("device1")
                 }
-                if(connectedDevices.count() == 1) {
+                if(connectedDevices.count() == 0) {
                     showDisconnected()
                 }
             }
@@ -122,7 +122,7 @@ class BluetoothChatFragment : Fragment() {
                 if(connectedDevices.contains("device2")) {
                     connectedDevices.remove("device2")
                 }
-                if(connectedDevices.count() == 2) {
+                if(connectedDevices.count() == 0) {
                     showDisconnected()
                 }
             }
