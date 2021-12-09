@@ -27,25 +27,16 @@ import java.util.*
  * The official specification can be found here:
  * [://www.bluetooth.org/en-us/specification/assigned-numbers/service-discovery][https]
  */
-val SERVICE_UUID: UUID = UUID.fromString("0000b81d-0000-1000-8000-00805f9b34fb")
-
-/**
- * Creating multiple services to support more than one connection at a time
- */
-val SERVICE_UUID1: UUID = UUID.fromString("0000e235-0000-1000-8000-00805f9b34fb")
-val SERVICE_UUID2: UUID = UUID.fromString("0000bba7-0000-1000-8000-00805f9b34fb")
-val SERVICE_UUID3: UUID = UUID.fromString("000036ae-0000-1000-8000-00805f9b34fb")
-
-val SERVICE_UUIDS = listOf(SERVICE_UUID1, SERVICE_UUID2, SERVICE_UUID3)
+val SERVICE_UUID: UUID = UUID.fromString("3032454c-426b-7261-5074-72616d536557")
 
 /**
  * UUID for the message
  */
 val MESSAGE_UUID: UUID = UUID.fromString("7db3e235-3608-41f3-a03c-955fcbd2ea4b")
 
-val MESSAGE_UUID1: UUID = UUID.fromString("7eccbba7-b943-45f6-9c65-2fc058f64acf")
-val MESSAGE_UUID2: UUID = UUID.fromString("596936ae-68e9-40a1-8f86-3949d1b56de4")
-val MESSAGE_UUID3: UUID = UUID.fromString("8de24b16-5926-4018-bede-24bc0c516962")
+val MESSAGE_UUID1: UUID = UUID.fromString("00008a01-0000-1000-8000-00805f9b34fb")
+val MESSAGE_UUID2: UUID = UUID.fromString("00008a02-0000-1000-8000-00805f9b34fb")
+val MESSAGE_UUID3: UUID = UUID.fromString("00008a03-0000-1000-8000-00805f9b34fb")
 
 val MESSAGE_UUIDS = listOf(MESSAGE_UUID1, MESSAGE_UUID2, MESSAGE_UUID3)
 

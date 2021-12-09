@@ -25,7 +25,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.bluetoothlechat.bluetooth.SERVICE_UUID
-import com.example.bluetoothlechat.bluetooth.SERVICE_UUIDS
 import com.example.bluetoothlechat.scan.DeviceScanViewState.*
 import java.util.*
 
@@ -111,16 +110,7 @@ class DeviceScanViewModel(app: Application) : AndroidViewModel(app) {
         val filter = builder.build()
 
         var filterList = mutableListOf<ScanFilter>()
-//        filterList.add(filter)
-
-        val ints: IntArray = intArrayOf(0, 1)
-
-        for (i in ints) {
-            val builder = ScanFilter.Builder()
-            builder.setServiceUuid(ParcelUuid(SERVICE_UUIDS[i]))
-            val filter = builder.build()
-            filterList.add(filter)
-        }
+        filterList.add(filter)
 
         return Collections.unmodifiableList(filterList)
     }
@@ -130,7 +120,7 @@ class DeviceScanViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun buildScanSettings(): ScanSettings {
         return ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
+            .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
             .build()
     }
 

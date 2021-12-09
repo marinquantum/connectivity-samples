@@ -45,27 +45,6 @@ class BluetoothChatFragment : Fragment() {
 
     private var connectedDevices = mutableListOf<String>()
 
-    private val deviceConnectionObserver = Observer<DeviceConnectionState> { state ->
-        when(state) {
-            is DeviceConnectionState.Connected -> {
-                val device = state.device
-                Log.d(TAG, "Gatt connection observer: have device $device")
-                chatWith(device)
-                if(!connectedDevices.contains("device")) {
-                    connectedDevices.add("device")
-                }
-            }
-            is DeviceConnectionState.Disconnected -> {
-                if(connectedDevices.contains("device")) {
-                    connectedDevices.remove("device")
-                }
-                if(connectedDevices.count() == 0) {
-                    showDisconnected()
-                }
-            }
-        }
-    }
-
     private val deviceConnectionObserver0 = Observer<DeviceConnectionState> { state ->
         when(state) {
             is DeviceConnectionState.Connected -> {
@@ -101,7 +80,7 @@ class BluetoothChatFragment : Fragment() {
                 if(connectedDevices.contains("device1")) {
                     connectedDevices.remove("device1")
                 }
-                if(connectedDevices.count() == 1) {
+                if(connectedDevices.count() == 0) {
                     showDisconnected()
                 }
             }
@@ -122,16 +101,11 @@ class BluetoothChatFragment : Fragment() {
                 if(connectedDevices.contains("device2")) {
                     connectedDevices.remove("device2")
                 }
-                if(connectedDevices.count() == 2) {
+                if(connectedDevices.count() == 0) {
                     showDisconnected()
                 }
             }
         }
-    }
-
-    private val connectionRequestObserver = Observer<BluetoothDevice> { device ->
-        Log.d(TAG, "Connection request observer: have device $device")
-        ChatServer.setCurrentChatConnection(device)
     }
 
     private val connectionRequestObserver0 = Observer<BluetoothDevice> { device ->
@@ -183,38 +157,19 @@ class BluetoothChatFragment : Fragment() {
     override fun onStart() {
         super.onStart()
         requireActivity().setTitle(R.string.chat_title)
-        ChatServer.connectionRequest.observe(viewLifecycleOwner, connectionRequestObserver)
         ChatServer.connectionRequestList[0].observe(viewLifecycleOwner, connectionRequestObserver0)
-        ChatServer.connectionRequestList[1].observe(viewLifecycleOwner, connectionRequestObserver1)
-        ChatServer.connectionRequestList[2].observe(viewLifecycleOwner, connectionRequestObserver2)
+//        ChatServer.connectionRequestList[1].observe(viewLifecycleOwner, connectionRequestObserver1)
+//        ChatServer.connectionRequestList[2].observe(viewLifecycleOwner, connectionRequestObserver2)
 
-        ChatServer.deviceConnection.observe(viewLifecycleOwner, deviceConnectionObserver)
         ChatServer.deviceConnectionList[0].observe(viewLifecycleOwner, deviceConnectionObserver0)
-        ChatServer.deviceConnectionList[1].observe(viewLifecycleOwner, deviceConnectionObserver1)
-        ChatServer.deviceConnectionList[2].observe(viewLifecycleOwner, deviceConnectionObserver2)
+//        ChatServer.deviceConnectionList[1].observe(viewLifecycleOwner, deviceConnectionObserver1)
+//        ChatServer.deviceConnectionList[2].observe(viewLifecycleOwner, deviceConnectionObserver2)
         ChatServer.messages.observe(viewLifecycleOwner, messageObserver)
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-
-    private fun chatWith(device: BluetoothDevice) {
-        binding.connectedContainer.visible()
-        binding.notConnectedContainer.gone()
-
-        val chattingWithString = resources.getString(R.string.chatting_with_device, device.address)
-        binding.connectedDeviceName.text = chattingWithString
-        binding.sendMessage.setOnClickListener {
-            val message = binding.messageText.text.toString()
-            // only send message if it is not empty
-            if (message.isNotEmpty()) {
-                ChatServer.sendMessage(message)
-                // clear message
-                binding.messageText.setText("")
-            }
-        }
     }
 
     private fun chatWith(device: BluetoothDevice, serverIndex: Int) {
