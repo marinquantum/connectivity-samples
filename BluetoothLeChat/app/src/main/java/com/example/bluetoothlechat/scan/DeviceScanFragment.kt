@@ -61,7 +61,7 @@ class DeviceScanFragment : Fragment() {
     }
 
     private val onDeviceSelected: (BluetoothDevice) -> Unit = { device ->
-        ChatServer.setCurrentChatConnection(device, 0)
+        ChatServer.setCurrentChatConnection(device)
         // navigate back to chat fragment
         findNavController().popBackStack()
     }

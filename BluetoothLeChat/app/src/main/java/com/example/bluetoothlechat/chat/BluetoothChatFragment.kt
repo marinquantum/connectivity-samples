@@ -45,108 +45,39 @@ class BluetoothChatFragment : Fragment() {
 
     private var connectedDevices = mutableListOf<String>()
 
-    private val deviceConnectionObserver = Observer<DeviceConnectionState> { state ->
-        when(state) {
-            is DeviceConnectionState.Connected -> {
-                val device = state.device
-                Log.d(TAG, "Gatt connection observer: have device $device")
-                chatWith(device)
-                if(!connectedDevices.contains("device")) {
-                    connectedDevices.add("device")
-                }
-            }
-            is DeviceConnectionState.Disconnected -> {
-                if(connectedDevices.contains("device")) {
-                    connectedDevices.remove("device")
-                }
-                if(connectedDevices.count() == 0) {
-                    showDisconnected()
-                }
-            }
-        }
-    }
-
-    private val deviceConnectionObserver0 = Observer<DeviceConnectionState> { state ->
-        when(state) {
-            is DeviceConnectionState.Connected -> {
-                val device = state.device
-                Log.d(TAG, "Gatt connection observer 0: have device $device")
-                chatWith(device, 0)
-                if(!connectedDevices.contains("device0")) {
-                    connectedDevices.add("device0")
-                }
-            }
-            is DeviceConnectionState.Disconnected -> {
-                if(connectedDevices.contains("device0")) {
-                    connectedDevices.remove("device0")
-                }
-                if(connectedDevices.count() == 0) {
-                    showDisconnected()
+    private val deviceConnectionListObserver = Observer<List<ChatServer.DeviceWithState>> { state ->
+        state.forEach { deviceWithState ->
+            run {
+                when (deviceWithState.connectionState) {
+                    is DeviceConnectionState.Connected -> {
+                        val device = deviceWithState.bluetoothDevice
+                        Log.d(TAG, "Gatt connection observer: have device $device")
+                        if (device != null) {
+                            chatWith(device)
+                        }
+                        if (!connectedDevices.contains(deviceWithState.deviceName)) {
+                            connectedDevices.add(deviceWithState.deviceName)
+                        }
+                    }
+                    is DeviceConnectionState.Disconnected -> {
+                        if (connectedDevices.contains(deviceWithState.deviceName)) {
+                            connectedDevices.remove(deviceWithState.deviceName)
+                        }
+                        if (connectedDevices.count() == 0) {
+                            showDisconnected()
+                        }
+                    }
                 }
             }
         }
     }
 
-    private val deviceConnectionObserver1 = Observer<DeviceConnectionState> { state ->
-        when(state) {
-            is DeviceConnectionState.Connected -> {
-                val device = state.device
-                Log.d(TAG, "Gatt connection observer 1: have device $device")
-                chatWith(device, 1)
-                if(!connectedDevices.contains("device1")) {
-                    connectedDevices.add("device1")
-                }
-            }
-            is DeviceConnectionState.Disconnected -> {
-                if(connectedDevices.contains("device1")) {
-                    connectedDevices.remove("device1")
-                }
-                if(connectedDevices.count() == 1) {
-                    showDisconnected()
-                }
+    private val connectionRequestListObserver = Observer<List<ChatServer.DeviceWithState>> { state ->
+        state.forEach { deviceWithState ->
+            run {
+                deviceWithState.bluetoothDevice?.let { ChatServer.setCurrentChatConnection(it) }
             }
         }
-    }
-
-    private val deviceConnectionObserver2 = Observer<DeviceConnectionState> { state ->
-        when(state) {
-            is DeviceConnectionState.Connected -> {
-                val device = state.device
-                Log.d(TAG, "Gatt connection observer 2: have device $device")
-                chatWith(device, 2)
-                if(!connectedDevices.contains("device2")) {
-                    connectedDevices.add("device2")
-                }
-            }
-            is DeviceConnectionState.Disconnected -> {
-                if(connectedDevices.contains("device2")) {
-                    connectedDevices.remove("device2")
-                }
-                if(connectedDevices.count() == 2) {
-                    showDisconnected()
-                }
-            }
-        }
-    }
-
-    private val connectionRequestObserver = Observer<BluetoothDevice> { device ->
-        Log.d(TAG, "Connection request observer: have device $device")
-        ChatServer.setCurrentChatConnection(device)
-    }
-
-    private val connectionRequestObserver0 = Observer<BluetoothDevice> { device ->
-        Log.d(TAG, "Connection request observer 0: have device $device")
-        ChatServer.setCurrentChatConnection(device, 0)
-    }
-
-    private val connectionRequestObserver1 = Observer<BluetoothDevice> { device ->
-        Log.d(TAG, "Connection request observer 1: have device $device")
-        ChatServer.setCurrentChatConnection(device, 1)
-    }
-
-    private val connectionRequestObserver2 = Observer<BluetoothDevice> { device ->
-        Log.d(TAG, "Connection request observer 2: have device $device")
-        ChatServer.setCurrentChatConnection(device, 2)
     }
 
     private val messageObserver = Observer<Message> { message ->
@@ -183,15 +114,8 @@ class BluetoothChatFragment : Fragment() {
     override fun onStart() {
         super.onStart()
         requireActivity().setTitle(R.string.chat_title)
-        ChatServer.connectionRequest.observe(viewLifecycleOwner, connectionRequestObserver)
-        ChatServer.connectionRequestList[0].observe(viewLifecycleOwner, connectionRequestObserver0)
-        ChatServer.connectionRequestList[1].observe(viewLifecycleOwner, connectionRequestObserver1)
-        ChatServer.connectionRequestList[2].observe(viewLifecycleOwner, connectionRequestObserver2)
-
-        ChatServer.deviceConnection.observe(viewLifecycleOwner, deviceConnectionObserver)
-        ChatServer.deviceConnectionList[0].observe(viewLifecycleOwner, deviceConnectionObserver0)
-        ChatServer.deviceConnectionList[1].observe(viewLifecycleOwner, deviceConnectionObserver1)
-        ChatServer.deviceConnectionList[2].observe(viewLifecycleOwner, deviceConnectionObserver2)
+        ChatServer.connectionRequestList.observe(viewLifecycleOwner, connectionRequestListObserver)
+        ChatServer.deviceConnectionList.observe(viewLifecycleOwner, deviceConnectionListObserver)
         ChatServer.messages.observe(viewLifecycleOwner, messageObserver)
     }
 
@@ -210,24 +134,7 @@ class BluetoothChatFragment : Fragment() {
             val message = binding.messageText.text.toString()
             // only send message if it is not empty
             if (message.isNotEmpty()) {
-                ChatServer.sendMessage(message)
-                // clear message
-                binding.messageText.setText("")
-            }
-        }
-    }
-
-    private fun chatWith(device: BluetoothDevice, serverIndex: Int) {
-        binding.connectedContainer.visible()
-        binding.notConnectedContainer.gone()
-
-        val chattingWithString = resources.getString(R.string.chatting_with_device, device.address)
-        binding.connectedDeviceName.text = chattingWithString
-        binding.sendMessage.setOnClickListener {
-            val message = binding.messageText.text.toString()
-            // only send message if it is not empty
-            if (message.isNotEmpty()) {
-                ChatServer.sendMessage(message, serverIndex)
+                ChatServer.sendMessage(message, device)
                 // clear message
                 binding.messageText.setText("")
             }

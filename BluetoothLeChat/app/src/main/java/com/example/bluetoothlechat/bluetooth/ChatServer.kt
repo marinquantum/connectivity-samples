@@ -25,6 +25,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.bluetoothlechat.bluetooth.Message.RemoteMessage
 import com.example.bluetoothlechat.chat.DeviceConnectionState
+import java.util.*
+import kotlin.collections.ArrayList
 
 private const val TAG = "ChatServer"
 
@@ -42,76 +44,44 @@ object ChatServer {
     // This property will be null if bluetooth is not enabled or if advertising is not
     // possible on the device
     private var advertiser: BluetoothLeAdvertiser? = null
-    private var advertiserList = mutableListOf<BluetoothLeAdvertiser?>(null, null, null)
-
     private var advertiseCallback: AdvertiseCallback? = null
-    private var advertiseCallbackList = mutableListOf<AdvertiseCallback?>(null, null, null)
 
     private var advertiseSettings: AdvertiseSettings = buildAdvertiseSettings()
 
     private var advertiseData: AdvertiseData = buildAdvertiseData()
-    private var advertiseDataList = listOf(buildAdvertiseData(0), buildAdvertiseData(1), buildAdvertiseData(2))
 
     // LiveData for reporting the messages sent to the device
     private val _messages = MutableLiveData<Message>()
     val messages = _messages as LiveData<Message>
 
     // LiveData for reporting connection requests
-    private val _connectionRequest = MutableLiveData<BluetoothDevice>()
-    val connectionRequest = _connectionRequest as LiveData<BluetoothDevice>
-
-    private val _connectionRequest0 = MutableLiveData<BluetoothDevice>()
-    val connectionRequest0 = _connectionRequest0 as LiveData<BluetoothDevice>
-
-    private val _connectionRequest1 = MutableLiveData<BluetoothDevice>()
-    val connectionRequest1 = _connectionRequest1 as LiveData<BluetoothDevice>
-
-    private val _connectionRequest2 = MutableLiveData<BluetoothDevice>()
-    val connectionRequest2 = _connectionRequest2 as LiveData<BluetoothDevice>
-
-    val _connectionRequestList = listOf(_connectionRequest0, _connectionRequest1, _connectionRequest2)
-    val connectionRequestList = listOf(connectionRequest0, connectionRequest1, connectionRequest2)
+    private val _connectionRequestArray = ArrayList<DeviceWithState>()
+    val _connectionRequestList = MutableLiveData<List<DeviceWithState>>()
+    val connectionRequestList = _connectionRequestList as LiveData<List<DeviceWithState>>
 
     // LiveData for reporting the messages sent to the device
     private val _requestEnableBluetooth = MutableLiveData<Boolean>()
     val requestEnableBluetooth = _requestEnableBluetooth as LiveData<Boolean>
 
-    private var gattServer: BluetoothGattServer? = null
-    private var gattServerList = mutableListOf<BluetoothGattServer?>(null, null, null)
+    private var gattServerList = mutableListOf<BluetoothGattServer?>(null, null)
 
-    private var gattServerCallback: GattServerCallback? = null
-    private var gattServerCallbackList = mutableListOf<GattServerCallback?>(null, null, null)
+    private var gattServerCallbackList = mutableListOf<GattServerCallback?>(null, null)
 
-    private var gattClient: BluetoothGatt? = null
-    private var gattClientList = mutableListOf<BluetoothGatt?>(null, null, null)
+    private var gattClientList = hashMapOf<String, BluetoothGatt?>()
 
-    private var gattClientCallback: GattClientCallback? = null
-    private var gattClientCallbackList = mutableListOf<GattClientCallback?>(null, null, null)
+    private var gattClientCallbackList = hashMapOf<String, GattClientCallback?>()
 
     // Properties for current chat device connection
-    private var currentDevice: BluetoothDevice? = null
-    private var currentDeviceList = mutableListOf<BluetoothDevice?>(null, null, null)
+//    private var currentDevice: BluetoothDevice? = null
+//    private var currentDeviceList = hashMapOf<String, BluetoothDevice?>()
 
-    private val _deviceConnection = MutableLiveData<DeviceConnectionState>()
-    val deviceConnection = _deviceConnection as LiveData<DeviceConnectionState>
+    private var _deviceConnectionArray = ArrayList<DeviceWithState>()
+    private val _deviceConnectionList = MutableLiveData<List<DeviceWithState>>()
+    val deviceConnectionList = _deviceConnectionList as LiveData<List<DeviceWithState>>
 
-    private val _deviceConnection0 = MutableLiveData<DeviceConnectionState>()
-    val deviceConnection0 = _deviceConnection0 as LiveData<DeviceConnectionState>
-
-    private val _deviceConnection1 = MutableLiveData<DeviceConnectionState>()
-    val deviceConnection1 = _deviceConnection1 as LiveData<DeviceConnectionState>
-
-    private val _deviceConnection2 = MutableLiveData<DeviceConnectionState>()
-    val deviceConnection2 = _deviceConnection2 as LiveData<DeviceConnectionState>
-
-    val _deviceConnectionList = listOf(_deviceConnection0, _deviceConnection1, _deviceConnection2)
-    val deviceConnectionList = listOf(deviceConnection0, deviceConnection1, deviceConnection2)
-
-    private var gatt: BluetoothGatt? = null
-    private var gattList = mutableListOf<BluetoothGatt?>(null, null, null)
+    private var gattList = hashMapOf<String, BluetoothGatt?>()
 
     private var messageCharacteristic: BluetoothGattCharacteristic? = null
-    private var messageCharacteristicList = mutableListOf<BluetoothGattCharacteristic?>(null, null, null)
 
     fun startServer(app: Application) {
         bluetoothManager = app.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -120,26 +90,17 @@ object ChatServer {
             _requestEnableBluetooth.value = true
         } else {
             _requestEnableBluetooth.value = false
-//            setupGattServer(app)
-//            startAdvertisement()
-
             val ints: IntArray = intArrayOf(0, 1)
 
             for (i in ints) {
                 setupGattServer(app, i)
-                startAdvertisement(i)
             }
+            startAdvertisement()
         }
     }
 
     fun stopServer() {
-//        stopAdvertising()
-
-        val ints: IntArray = intArrayOf(0, 1)
-
-        for (i in ints) {
-            stopAdvertising(i)
-        }
+        stopAdvertising()
     }
 
     /**
@@ -153,59 +114,35 @@ object ChatServer {
     fun getYourDeviceAddress(): String = bluetoothManager.adapter.address
 
     fun setCurrentChatConnection(device: BluetoothDevice) {
-        currentDevice = device
+//        currentDevice = device
         // Set gatt so BluetoothChatFragment can display the device data
-        _deviceConnection.value = DeviceConnectionState.Connected(device)
-        connectToChatDevice(device)
-    }
-
-    fun setCurrentChatConnection(device: BluetoothDevice, serverIndex: Int) {
-        currentDeviceList[serverIndex] = device
-        // Set gatt so BluetoothChatFragment can display the device data
-        _deviceConnectionList[serverIndex].value = DeviceConnectionState.Connected(device)
-        connectToChatDevice(device, serverIndex)
+        val firstDevice = _deviceConnectionArray.filter { it.bluetoothDevice == device }.firstOrNull()
+        if(firstDevice == null) {
+            val deviceWithState = DeviceWithState()
+            deviceWithState.bluetoothDevice = device
+            deviceWithState.deviceName = device.address
+            deviceWithState.connectionState = DeviceConnectionState.Connected(device)
+            _deviceConnectionArray.add(deviceWithState)
+            _deviceConnectionList.postValue(_deviceConnectionArray)
+            connectToChatDevice(device)
+        }
     }
 
     private fun connectToChatDevice(device: BluetoothDevice) {
-        gattClientCallback = GattClientCallback()
-        gattClient = device.connectGatt(app, false, gattClientCallback)
+        gattClientCallbackList[device.address] = GattClientCallback()
+        gattClientCallbackList[device.address]?.device_address = device.address
+        gattClientList[device.address] = device.connectGatt(app, false, gattClientCallbackList[device.address])
     }
 
-    private fun connectToChatDevice(device: BluetoothDevice, serverIndex: Int) {
-        gattClientCallbackList[serverIndex] = GattClientCallback()
-        gattClientCallbackList[serverIndex]?.serverIndex = serverIndex
-        gattClientList[serverIndex] = device.connectGatt(app, false, gattClientCallbackList[serverIndex])
-    }
-
-    fun sendMessage(message: String): Boolean {
+    fun sendMessage(message: String, device: BluetoothDevice): Boolean {
         Log.d(TAG, "Send a message")
         messageCharacteristic?.let { characteristic ->
             characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
 
             val messageBytes = message.toByteArray(Charsets.UTF_8)
             characteristic.value = messageBytes
-            gatt?.let {
+            gattList[device.address]?.let {
                 val success = it.writeCharacteristic(messageCharacteristic)
-                Log.d(TAG, "onServicesDiscovered: message send: $success")
-                if (success) {
-                    _messages.value = Message.LocalMessage(message)
-                }
-            } ?: run {
-                Log.d(TAG, "sendMessage: no gatt connection to send a message with")
-            }
-        }
-        return false
-    }
-
-    fun sendMessage(message: String, receiver: Int): Boolean {
-        Log.d(TAG, "Send a message")
-        messageCharacteristicList[receiver]?.let { characteristic ->
-            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-
-            val messageBytes = message.toByteArray(Charsets.UTF_8)
-            characteristic.value = messageBytes
-            gattList[receiver]?.let {
-                val success = it.writeCharacteristic(messageCharacteristicList[receiver])
                 Log.d(TAG, "onServicesDiscovered: message send 2: $success")
                 if (success) {
                     _messages.value = Message.LocalMessage(message)
@@ -222,24 +159,6 @@ object ChatServer {
      * This requires setting up the available services and characteristics that other devices
      * can read and modify.
      */
-    private fun setupGattServer(app: Application) {
-        gattServerCallback = GattServerCallback()
-
-        gattServer = bluetoothManager.openGattServer(
-            app,
-            gattServerCallback
-        ).apply {
-            val setupGattServiceInstance = setupGattService()
-            try {
-                setupGattServiceInstance?.let {
-                    addService(it)
-                }
-            } catch (e:NullPointerException) {
-                System.err.println("Null pointer exception");
-            }
-        }
-    }
-
     private fun setupGattServer(app: Application, serverIndex: Int) {
         gattServerCallbackList[serverIndex] = GattServerCallback()
         gattServerCallbackList[serverIndex]?.serverIndex = serverIndex
@@ -262,9 +181,9 @@ object ChatServer {
     /**
      * Function to create the GATT Server with the required characteristics and descriptors
      */
-    private fun setupGattService(): BluetoothGattService {
+    private fun setupGattService(serviceIndex: Int): BluetoothGattService {
         // Setup gatt service
-        val service = BluetoothGattService(SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
+        val service = BluetoothGattService(SERVICE_UUIDS[serviceIndex], BluetoothGattService.SERVICE_TYPE_PRIMARY)
         // need to ensure that the property is writable and has the write permission
         val messageCharacteristic = BluetoothGattCharacteristic(
             MESSAGE_UUID,
@@ -274,26 +193,6 @@ object ChatServer {
         service.addCharacteristic(messageCharacteristic)
         val confirmCharacteristic = BluetoothGattCharacteristic(
             CONFIRM_UUID,
-            BluetoothGattCharacteristic.PROPERTY_WRITE,
-            BluetoothGattCharacteristic.PERMISSION_WRITE
-        )
-        service.addCharacteristic(confirmCharacteristic)
-
-        return service
-    }
-
-    private fun setupGattService(serviceIndex: Int): BluetoothGattService {
-        // Setup gatt service
-        val service = BluetoothGattService(SERVICE_UUIDS[serviceIndex], BluetoothGattService.SERVICE_TYPE_PRIMARY)
-        // need to ensure that the property is writable and has the write permission
-        val messageCharacteristic = BluetoothGattCharacteristic(
-            MESSAGE_UUIDS[serviceIndex],
-            BluetoothGattCharacteristic.PROPERTY_WRITE,
-            BluetoothGattCharacteristic.PERMISSION_WRITE
-        )
-        service.addCharacteristic(messageCharacteristic)
-        val confirmCharacteristic = BluetoothGattCharacteristic(
-            CONFIRM_UUIDS[serviceIndex],
             BluetoothGattCharacteristic.PROPERTY_WRITE,
             BluetoothGattCharacteristic.PERMISSION_WRITE
         )
@@ -316,34 +215,21 @@ object ChatServer {
         }
     }
 
-    private fun startAdvertisement(serverIndex: Int) {
-        advertiserList[serverIndex] = adapter.bluetoothLeAdvertiser
-        val advertiser = advertiserList[serverIndex]
-        Log.d(TAG, "startAdvertisement: with advertiser $advertiser")
-
-        if (advertiseCallbackList[serverIndex] == null) {
-            advertiseCallbackList[serverIndex] = DeviceAdvertiseCallback()
-
-            advertiserList[serverIndex]?.startAdvertising(advertiseSettings, advertiseDataList[serverIndex], advertiseCallbackList[serverIndex])
-        }
-    }
-
     /**
      * Stops BLE Advertising.
      */
     private fun stopAdvertising() {
-        Log.d(TAG, "Stopping Advertising with advertiser $advertiser")
-        advertiser?.stopAdvertising(advertiseCallback)
-        advertiseCallback = null
-        gattServer?.close()
-    }
+        try {
+            Log.d(TAG, "Stopping Advertising with advertiser")
+            advertiser?.stopAdvertising(advertiseCallback)
+            advertiseCallback = null
+            gattList[0]?.close()
+            gattList[1]?.close()
 
-    private fun stopAdvertising(serverIndex: Int) {
-        val advertiser = advertiserList[serverIndex]
-        Log.d(TAG, "Stopping Advertising with advertiser $advertiser")
-        advertiserList[serverIndex]?.stopAdvertising(advertiseCallbackList[serverIndex])
-        advertiseCallbackList[serverIndex] = null
-        gattServerList[serverIndex]?.close()
+        }
+        catch (e:NullPointerException) {
+
+        }
     }
 
     /**
@@ -362,29 +248,8 @@ object ChatServer {
          * onStartFailure() method of an AdvertiseCallback implementation.
          */
         val dataBuilder = AdvertiseData.Builder()
-            .addServiceUuid(ParcelUuid(SERVICE_UUID))
-            .setIncludeDeviceName(true)
-
-        /* For example - this will cause advertising to fail (exceeds size limit) */
-        //String failureData = "asdghkajsghalkxcjhfa;sghtalksjcfhalskfjhasldkjfhdskf";
-        //dataBuilder.addServiceData(Constants.Service_UUID, failureData.getBytes());
-        return dataBuilder.build()
-    }
-
-    private fun buildAdvertiseData(serverIndex: Int): AdvertiseData {
-        /**
-         * Note: There is a strict limit of 31 Bytes on packets sent over BLE Advertisements.
-         * This limit is outlined in section 2.3.1.1 of this document:
-         * https://inst.eecs.berkeley.edu/~ee290c/sp18/note/BLE_Vol6.pdf
-         *
-         * This limit includes everything put into AdvertiseData including UUIDs, device info, &
-         * arbitrary service or manufacturer data.
-         * Attempting to send packets over this limit will result in a failure with error code
-         * AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE. Catch this error in the
-         * onStartFailure() method of an AdvertiseCallback implementation.
-         */
-        val dataBuilder = AdvertiseData.Builder()
-            .addServiceUuid(ParcelUuid(SERVICE_UUIDS[serverIndex]))
+            .addServiceUuid(ParcelUuid(SERVICE_UUIDS[0]))
+            .addServiceUuid(ParcelUuid(SERVICE_UUIDS[1]))
             .setIncludeDeviceName(true)
 
         /* For example - this will cause advertising to fail (exceeds size limit) */
@@ -404,6 +269,12 @@ object ChatServer {
             .build()
     }
 
+    class DeviceWithState {
+        public var deviceName: String = ""
+        public var connectionState: DeviceConnectionState? = null
+        public var bluetoothDevice: BluetoothDevice? = null
+    }
+
     /**
      * Custom callback for the Gatt Server this device implements
      */
@@ -419,19 +290,35 @@ object ChatServer {
                 "onConnectionStateChange: Server $device ${device.name} success: $isSuccess connected: $isConnected"
             )
             if (isSuccess && isConnected) {
-                if(serverIndex != null) {
-                    _connectionRequestList[serverIndex!!].postValue(device)
+                var connectionRequest = _connectionRequestArray.filter { it.bluetoothDevice == device }.firstOrNull()
+
+                val deviceWithState = DeviceWithState()
+                deviceWithState.bluetoothDevice = device
+                deviceWithState.deviceName = device.address
+                deviceWithState.connectionState = DeviceConnectionState.Connected(device)
+
+                if(connectionRequest == null) {
+                    _connectionRequestArray.add(deviceWithState)
                 }
                 else {
-                    _connectionRequest.postValue(device)
+                    connectionRequest = deviceWithState
                 }
+                _connectionRequestList.postValue(_connectionRequestArray)
             } else {
-                if(serverIndex != null) {
-                    _deviceConnectionList[serverIndex!!].postValue(DeviceConnectionState.Disconnected)
+                var deviceConnection = _deviceConnectionArray.filter { it.bluetoothDevice == device }.firstOrNull()
+
+                val deviceWithState = DeviceWithState()
+                deviceWithState.bluetoothDevice = device
+                deviceWithState.deviceName = device.address
+                deviceWithState.connectionState = DeviceConnectionState.Disconnected
+
+                if(deviceConnection == null) {
+                    _deviceConnectionArray.add(deviceWithState)
                 }
                 else {
-                    _deviceConnection.postValue(DeviceConnectionState.Disconnected)
+                    deviceConnection = deviceWithState
                 }
+                _deviceConnectionList.postValue(_deviceConnectionArray)
             }
         }
 
@@ -446,24 +333,11 @@ object ChatServer {
         ) {
             super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value)
             if (characteristic.uuid == MESSAGE_UUID) {
-                gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+                gattServerList[serverIndex!!]?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
                 val message = value?.toString(Charsets.UTF_8)
                 Log.d(TAG, "onCharacteristicWriteRequest: Have message: \"$message\"")
                 message?.let {
                     _messages.postValue(RemoteMessage(it))
-                }
-            }
-            else {
-                val messageUuidIndex = MESSAGE_UUIDS.indexOfFirst {
-                    it.toString() == characteristic.uuid.toString()
-                }
-                if(messageUuidIndex != -1) {
-                    gattServerList[messageUuidIndex]?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
-                    val message = value?.toString(Charsets.UTF_8)
-                    Log.d(TAG, "onCharacteristicWriteRequest: Have message: \"$message\"")
-                    message?.let {
-                        _messages.postValue(RemoteMessage(it))
-                    }
                 }
             }
         }
@@ -471,7 +345,7 @@ object ChatServer {
 
     private class GattClientCallback : BluetoothGattCallback() {
 
-        public var serverIndex: Int? = null
+        public var device_address: String? = null
 
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             super.onConnectionStateChange(gatt, status, newState)
@@ -490,15 +364,16 @@ object ChatServer {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.d(TAG, "onServicesDiscovered: Have gatt $discoveredGatt")
 
-                if(serverIndex != null) {
-                    gattList[serverIndex!!] = discoveredGatt
-                    val service = discoveredGatt.getService(SERVICE_UUIDS[serverIndex!!])
-                    messageCharacteristicList[serverIndex!!] = service.getCharacteristic(MESSAGE_UUIDS[serverIndex!!])
+                val service0 = discoveredGatt.getService(SERVICE_UUIDS[0])
+                if(service0 != null && device_address != null && gattList[device_address!!] != null) {
+                    gattList[device_address!!] = discoveredGatt
+                    messageCharacteristic = service0.getCharacteristic(MESSAGE_UUID)
                 }
-                else {
-                    gatt = discoveredGatt
-                    val service = discoveredGatt.getService(SERVICE_UUID)
-                    messageCharacteristic = service.getCharacteristic(MESSAGE_UUID)
+
+                val service1 = discoveredGatt.getService(SERVICE_UUIDS[1])
+                if(service1 != null && device_address != null && gattList[device_address!!] != null) {
+                    gattList[device_address!!] = discoveredGatt
+                    messageCharacteristic = service1.getCharacteristic(MESSAGE_UUID)
                 }
             }
         }
